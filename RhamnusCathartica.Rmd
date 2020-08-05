@@ -1,0 +1,74 @@
+---
+title: "GeorefRham"
+author: "Laura Kostyniuk"
+date: "04/08/2020"
+output: html_document
+---
+
+# Project
+
+This project's goal is to convert the spreadsheet data of georeferenced locations of instances of R. cathartica into maps projections and models that can overlay climate data, or separate the data into different subcategories.
+
+Steps:
+- Import data from google sheets and refine for manipulation in R Studio.  
+- Create a local copy of the refined dataset  
+- Separate data into logical subcategories  
+- Import map to overlay plot of points on  
+- Overlay plotted points, correct errors  
+- Add climate data to map  
+
+```{r}
+install.packages("googlesheets4") # installing package
+library(googlesheets4) # loading package
+
+Rham <- read_sheet("https://docs.google.com/spreadsheets/d/1JCgvTShYHXt2PfiDQowLeX9m3N7h_2r8mqTk6vS6_tU/edit?usp=sharing") # read data
+```
+
+```{r}
+Rham <- Rham[, ! colnames(Rham) %in% c("occurrenceID", "georeferencedDate",
+                                       "catalogNumber", "recordNumber")] # removing funky columns
+write.table(x = Rham, file = "Rham.tsv") # storing local copy of file from google sheets to prevent having to re-authenticate
+Rham <- read.table("Rham.tsv") # data preview
+```
+
+Plotting out all the data we will be working with:
+
+```{r}
+plot(x = Rham$decimalLongitude, y = Rham$decimalLatitude, xlab = "Longitude", ylab = "Latitude")
+
+```
+
+```{r}
+summary(Rham) # important information: min year = 1600, max year = 2019
+              # important information: min precision = 1, max precision = 4000000
+```
+
+```{r}
+withDate <- Rham[Rham$year >= 1600 , ]
+withDate <- withDate[Rham$year <= 2019, ]
+
+```
+
+```{r}
+install.packages(c("raster", "rgdal", "dismo", "rJava", "maptools", "rgeos"))
+library(rgeos)
+library(maptools)
+data(wrld_simpl)
+plot(wrld_simpl)
+box()
+points(Rham$decimalLongitude, Rham$decimalLatitude, col="green", pch=20, cex=0.75)
+points(Rham$decimalLongitude, Rham$decimalLatitude, col="gray", cex=0.75)
+```
+```{r}
+hist(Rham$month, breaks = 12, xlab="Month")
+```
+
+```{r}
+cad <- Rham[Rham$countryCode == "CA", ]
+hist(cad$month, breaks = 12, xlab="Month")
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
