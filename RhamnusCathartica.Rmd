@@ -5,20 +5,48 @@ date: "04/08/2020"
 output: html_document
 ---
 
-# Project
+# **Rhamnus cathartica: Georeferencing and Making Species Dsitribution Models**
 
 This project's goal is to convert the spreadsheet data of georeferenced locations of instances of R. cathartica into maps projections and models that can overlay climate data, or separate the data into different subcategories.
 
-Steps:
-- Import data from google sheets and refine for manipulation in R Studio.  
-- Create a local copy of the refined dataset  
-- Separate data into logical subcategories  
-- Import map to overlay plot of points on  
-- Overlay plotted points, correct errors  
-- Add climate data to map  
+R. cathartica (common buckthorn) is native to Europe, parts of Asia, and parts of Africa. It is naturalized in North America, and considered an invasive species in some US states and Ontario, Canada. 
+
+##GBIF Data Cleansing
+
+The original data that was used in these models is from GBIF. The following steps were applied to the spreadsheets downloaded from GBIF to organize and complete the data:
+- re-organize records by country code, province, and locality alphabetically.  
+- search and remove existing latitude/longitude coordinates that did not make sense (0,0 coordinates, coordinates that were duplicated in multiple records with different localities).  
+- Add missing province information to records that contained clear locality information and/or coordinates already.  
+- Manually pass through data: reading, interpreting, and finding the localities described. Once found, the coordinates and uncertainty were obtained using Google Maps and inputted into the spreadsheet.  
+- *NOTE: not all localities were possible to identify. In these cases, no coordinates or uncertainty were added to the spreadsheet, and LocationNotFound keyword was added ot the record.*  
+
+##Data formatting and Model Construction
+
+The cleansed data from GBIF was downloaded as a .tsv file and formatted properly for model construction in R studio. The following steps were applied to the data in this Rmd file.
+- Download necessary R packages before they will be needed.  
+- Import data from Google sheets.  
+- Refine data format for use in R studio.  
+- Create a local copy of refined dataset.  
+- Plot data on scatterplot to see general shape (checking that data makes sense).  
+- Plot data on a basic map projection.  
+- Create subsets of data; by country, decade, etc.  
+- Colour code points on map by subsets created.  
+
+- Create climate data maps  
+- Add uncertainty to points  
+```{r}
+# packages required to install to run this Rmd file
+install.packages(c("googlesheets4", 
+                   "raster", 
+                   "rgdal", 
+                   "dismo", 
+                   "rJava", 
+                   "maptools", 
+                   "rgeos", 
+                   "scales"))
+```
 
 ```{r}
-install.packages("googlesheets4") # installing package
 library(googlesheets4) # loading package
 
 Rham <- read_sheet("https://docs.google.com/spreadsheets/d/1JCgvTShYHXt2PfiDQowLeX9m3N7h_2r8mqTk6vS6_tU/edit?usp=sharing") # read data
@@ -34,38 +62,40 @@ Rham <- read.table("Rham.tsv") # data preview
 Plotting out all the data we will be working with:
 
 ```{r}
-plot(x = Rham$decimalLongitude, y = Rham$decimalLatitude, xlab = "Longitude", ylab = "Latitude")
+plot(x = Rham$decimalLongitude, y = Rham$decimalLatitude, xlab = "Longitude", ylab = "Latitude", cex=0.5)
 
 ```
-
+Plotting the data we will be working with on a map projection:
+```{r}
+library(scales)
+library(rgeos)
+library(maptools)
+data(wrld_simpl)
+plot(wrld_simpl)
+box()
+points(Rham$decimalLongitude, Rham$decimalLatitude, col=alpha("red", 0.5), pch=16, cex=0.25)
+```
 ```{r}
 summary(Rham) # important information: min year = 1600, max year = 2019
               # important information: min precision = 1, max precision = 4000000
 ```
 
 ```{r}
-withDate <- Rham[Rham$year >= 1600 , ]
-withDate <- withDate[Rham$year <= 2019, ]
-
+# creating useful objects 
+withDate <- subset(Rham, year > 1599 & year < 2020)
+withPrec <- subset(Rham, coordinateUncertaintyInMeters > 0 & coordinateUncertaintyInMeters < 4000001)
 ```
-
-```{r}
-install.packages(c("raster", "rgdal", "dismo", "rJava", "maptools", "rgeos"))
-library(rgeos)
-library(maptools)
-data(wrld_simpl)
-plot(wrld_simpl)
-box()
-points(Rham$decimalLongitude, Rham$decimalLatitude, col="green", pch=20, cex=0.75)
-points(Rham$decimalLongitude, Rham$decimalLatitude, col="gray", cex=0.75)
-```
+Visualizing when the occurrences of R. cathartica are noted during the year (by month):
 ```{r}
 hist(Rham$month, breaks = 12, xlab="Month")
 ```
-
+Comparing the worldwide frequency of ocurrence per month to the Canadian ocurrence per month:
 ```{r}
 cad <- Rham[Rham$countryCode == "CA", ]
 hist(cad$month, breaks = 12, xlab="Month")
+```
+```{r}
+usa <- Rham[Rham$countryCode == "US", ]
 ```
 
 
