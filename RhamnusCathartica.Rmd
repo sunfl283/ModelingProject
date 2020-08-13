@@ -204,6 +204,42 @@ Comparing the worldwide frequency of occurrence per month to the Canadian occurr
 ```{r}
 hist(cad$month, breaks = 12, xlab="Month")
 ```
+Attempting to use heatmap information on maps:
+```{r}
+# remove records with missing coordinates
+library(raster)
+RhamComplete <- subset(Rham, !is.na(decimalLongitude) &
+                            !is.na(decimalLatitude)) 
+
+# convert data.frame to a spatialPoints object
+coordinates(RhamComplete)  <- ~decimalLongitude+decimalLatitude
+
+# create an empty raster for the whole world
+r <- raster(wrld_simpl)
+
+# set to 3 degrees resolution
+res(r) = 3
+
+occDensity <- rasterize(coordinates(RhamComplete), r, fun = 'count',
+                       background = 0)
+
+plot(occDensity, xlim = c(-100, -60), ylim = c(35, 50))
+plot(occDensity)
+plot(wrld_simpl, add = TRUE)
+
+#llproj <- CRS('+proj=longlat +datum=WGS84')
+```
+A North American heat map:
+```{r}
+library(raster)
+a <- raster(bind(getData("GADM", country="CAN",level=1), getData("GADM", country="US",level=1)))
+res(a)=1
+occDensity <- rasterize(coordinates(RhamComplete), r, fun = 'count',
+                       background = 0)
+plot(occDensity, xlim = c(-135, -60), ylim = c(30, 80))
+#plot(occDensity)
+plot(bind(getData("GADM", country="CAN",level=1), getData("GADM", country="US",level=1)), add = TRUE)
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
