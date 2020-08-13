@@ -50,6 +50,7 @@ install.packages(c("googlesheets4",
 library(googlesheets4) # loading package
 
 Rham <- read_sheet("https://docs.google.com/spreadsheets/d/1JCgvTShYHXt2PfiDQowLeX9m3N7h_2r8mqTk6vS6_tU/edit?usp=sharing") # read data
+#must copy and paste above line into terminal
 ```
 
 ```{r}
@@ -59,8 +60,7 @@ write.table(x = Rham, file = "Rham.tsv") # storing local copy of file from googl
 Rham <- read.table("Rham.tsv") # data preview
 ```
 
-Plotting out all the data we will be working with:
-
+Plotting out all the data we will be working with on a simple XY scatterplot:
 ```{r}
 plot(x = Rham$decimalLongitude, y = Rham$decimalLatitude, xlab = "Longitude", ylab = "Latitude", cex=0.5)
 
@@ -75,111 +75,132 @@ plot(wrld_simpl)
 box()
 points(Rham$decimalLongitude, Rham$decimalLatitude, col=alpha("red", 0.5), pch=16, cex=0.25)
 ```
+A summary of all the information about the dataset:
 ```{r}
 summary(Rham) # important information: min year = 1600, max year = 2019
               # important information: min precision = 1, max precision = 4000000
 ```
 
 ```{r}
-# creating useful objects 
+# creating objects; practice/useful?
 withDate <- subset(Rham, year >= 1600 & year <= 2019)
 withPrec <- subset(Rham, coordinateUncertaintyInMeters >= 1 & coordinateUncertaintyInMeters <= 4000000)
 ```
-
+The following map is the same world map zoomed in on the US. The colour of the dot corresponds to the decade the record was recorded.
 ```{r}
-# subsetting US records by date and mapping them on a US map
 usa <- subset(Rham, countryCode == "US")
-#used summary(usa) to determine earliest record is from 1844, 
-#latest record is from 2018
-#logical separation is every 10 years: 1840 to 2020, 18 decades/divisions
-us1 <- subset(usa, year >=1840 & year <=1849)
-us2 <- subset(usa, year >=1850 & year <=1859)
-us3 <- subset(usa, year >=1860 & year <=1869)
-us4 <- subset(usa, year >=1870 & year <=1879)
-us5 <- subset(usa, year >=1880 & year <=1889)
-us6 <- subset(usa, year >=1890 & year <=1899)
-us7 <- subset(usa, year >=1900 & year <=1909)
-us8 <- subset(usa, year >=1910 & year <=1919)
-us9 <- subset(usa, year >=1920 & year <=1929)
-us10 <- subset(usa, year >=1930 & year <=1939)
-us11 <- subset(usa, year >=1940 & year <=1949)
-us12 <- subset(usa, year >=1950 & year <=1959)
-us13 <- subset(usa, year >=1960 & year <=1969)
-us14 <- subset(usa, year >=1970 & year <=1979)
-us15 <- subset(usa, year >=1980 & year <=1989)
-us16 <- subset(usa, year >=1990 & year <=1999)
-us17 <- subset(usa, year >=2000 & year <=2009)
-us18 <- subset(usa, year >=2010 & year <=2019)
+usa$decade <- cut(usa$year, seq(1829, 2019, by = 10), dig.lab=4)
+
 library(scales)
 library(rgeos)
 library(maptools)
 data(wrld_simpl)
+
 plot(wrld_simpl, xlim=c(-127, -63), ylim=c(20, 50))
 box()
-points(x=us1$decimalLongitude, y=us1$decimalLatitude, col=alpha("#F71B18", 0.75), pch=16, cex=0.25)
-points(x=us2$decimalLongitude, y=us2$decimalLatitude, col=alpha("#F74D18", 0.5), pch=16, cex=0.25)
-points(x=us3$decimalLongitude, y=us3$decimalLatitude, col=alpha("#F77F18", 0.75), pch=16, cex=0.25)
-points(x=us4$decimalLongitude, y=us4$decimalLatitude, col=alpha("#F7B218", 0.75), pch=16, cex=0.25)
-points(x=us5$decimalLongitude, y=us5$decimalLatitude, col=alpha("#F7E419", 0.75), pch=16, cex=0.25)
-points(x=us6$decimalLongitude, y=us6$decimalLatitude, col=alpha("#D7F719", 0.75), pch=16, cex=0.25)
-points(x=us7$decimalLongitude, y=us7$decimalLatitude, col=alpha("#A5F719", 0.75), pch=16, cex=0.25)
-points(x=us8$decimalLongitude, y=us8$decimalLatitude, col=alpha("#74F71A", 0.75), pch=16, cex=0.25)
-points(x=us9$decimalLongitude, y=us9$decimalLatitude, col=alpha("#42F71A", 0.75), pch=16, cex=0.25)
-points(x=us10$decimalLongitude, y=us10$decimalLatitude, col=alpha("#1AF724", 0.75), pch=16, cex=0.25)
-points(x=us11$decimalLongitude, y=us11$decimalLatitude, col=alpha("#1AF756", 0.75), pch=16, cex=0.25)
-points(x=us12$decimalLongitude, y=us12$decimalLatitude, col=alpha("#1BF788", 0.75), pch=16, cex=0.25)
-points(x=us13$decimalLongitude, y=us13$decimalLatitude, col=alpha("#1BF7B9", 0.75), pch=16, cex=0.25)
-points(x=us14$decimalLongitude, y=us14$decimalLatitude, col=alpha("#1BF7EB", 0.75), pch=16, cex=0.25)
-points(x=us15$decimalLongitude, y=us15$decimalLatitude, col=alpha("#1CD1F7", 0.75), pch=16, cex=0.25)
-points(x=us16$decimalLongitude, y=us16$decimalLatitude, col=alpha("#1CA0F7", 0.75), pch=16, cex=0.25)
-points(x=us17$decimalLongitude, y=us17$decimalLatitude, col=alpha("#1C6EF7", 0.75), pch=16, cex=0.25)
-points(x=us18$decimalLongitude, y=us18$decimalLatitude, col=alpha("#1D3DF7", 0.75), pch=16, cex=0.25)
-#hex codes for colours and gradient was created using http://www.perbang.dk/rgbgradient/
+points(x=usa$decimalLongitude, y=usa$decimalLatitude, col=alpha(colours()[usa$decade]), pch=16, cex=0.25)
 ```
+The following map is the same world map zoomed in on Canada. The colour of the dot corresponds to the decade the record was recorded.
 ```{r}
 cad <- subset(Rham, countryCode == "CA")
-# used summary(cad)to determine oldest record is from 1894, youngest record is from 2019
-#will divide into 13 decades from 1890 to 2020
-ca1 <- subset(cad, year >=1890 & year <=1899)
-ca2 <- subset(cad, year >=1900 & year <=1909)
-ca3 <- subset(cad, year >=1910 & year <=1919)
-ca4 <- subset(cad, year >=1920 & year <=1929)
-ca5 <- subset(cad, year >=1930 & year <=1939)
-ca6 <- subset(cad, year >=1940 & year <=1949)
-ca7 <- subset(cad, year >=1950 & year <=1959)
-ca8 <- subset(cad, year >=1960 & year <=1969)
-ca9 <- subset(cad, year >=1970 & year <=1979)
-ca10 <- subset(cad, year >=1980 & year <=1989)
-ca11 <- subset(cad, year >=1990 & year <=1999)
-ca12 <- subset(cad, year >=2000 & year <=2009)
-ca13 <- subset(cad, year >=2010 & year <=2019)
+cad$decade <- cut(cad$year, seq(1879, 2019, by = 10), dig.lab=4)
+
 library(scales)
 library(rgeos)
 library(maptools)
 data(wrld_simpl)
+
 plot(wrld_simpl, xlim=c(-145, -50), ylim=c(40, 80))
 box()
-points(x=ca1$decimalLongitude, y=ca1$decimalLatitude, col=alpha("#28EB2F", 0.75), pch=16, cex=0.5)
-points(x=ca2$decimalLongitude, y=ca2$decimalLatitude, col=alpha("#55EA27", 0.5), pch=16, cex=0.5)
-points(x=ca3$decimalLongitude, y=ca3$decimalLatitude, col=alpha("#8AEA27", 0.75), pch=16, cex=0.5)
-points(x=ca4$decimalLongitude, y=ca4$decimalLatitude, col=alpha("#BFEA27", 0.75), pch=16, cex=0.5)
-points(x=ca5$decimalLongitude, y=ca5$decimalLatitude, col=alpha("#EADF27", 0.75), pch=16, cex=0.5)
-points(x=ca6$decimalLongitude, y=ca6$decimalLatitude, col=alpha("#E9A927", 0.75), pch=16, cex=0.5)
-points(x=ca7$decimalLongitude, y=ca7$decimalLatitude, col=alpha("#E97426", 0.75), pch=16, cex=0.5)
-points(x=ca8$decimalLongitude, y=ca8$decimalLatitude, col=alpha("#E93E26", 0.75), pch=16, cex=0.5)
-points(x=ca9$decimalLongitude, y=ca9$decimalLatitude, col=alpha("#E92644", 0.75), pch=16, cex=0.5)
-points(x=ca10$decimalLongitude, y=ca10$decimalLatitude, col=alpha("#E82679", 0.75), pch=16, cex=0.5)
-points(x=ca11$decimalLongitude, y=ca11$decimalLatitude, col=alpha("#E826AE", 0.75), pch=16, cex=0.5)
-points(x=ca12$decimalLongitude, y=ca12$decimalLatitude, col=alpha("#E826E3", 0.75), pch=16, cex=0.5)
-points(x=ca13$decimalLongitude, y=ca13$decimalLatitude, col=alpha("#B826E8", 0.75), pch=16, cex=0.5)
-#hex codes for colours and gradient was created using http://www.perbang.dk/rgbgradient/
+#levels(cad$decade) <- c(seq(cad$decade))
+points(x=cad$decimalLongitude, y=cad$decimalLatitude, col=alpha(colours()[cad$decade], 0.75), cex=0.25, pch=16)
+```
+More work would have to be done to adjust the colours and make them more intuitive. I would like to be able to use hex codes for colours and create smooth gratients. such is possible with [this website](http://www.perbang.dk/rgbgradient/)
+
+The following is the setup of the North American data to make a more informative map. 
+```{r}
+#setup of Noth American data
+nam <- bind(cad, usa)
+print("The earliest record collected in North America:", quote=FALSE)
+min(nam$year, na.rm=TRUE)
+print("The youngest record collected in North America:", quote=FALSE)
+max(nam$year, na.rm=TRUE)
+
+nam$decade <- cut(nam$year, seq(1839, 2019, by = 10), dig.lab=4)
+
+nam$quell <- cut(nam$year, seq(1824, 2024, by = 25), dig.lab=4)
+#all year values are one less than desired for cutoff rates as cut function creates (] levels; therefore and exclusive beginning and inclusive ending number, and the values given define the endings of each level
+
+#adding "No Year" levels to both decade and quell columns
+print("Table of decade levels", quote=FALSE)
+levels(nam$decade) <- c(levels(nam$decade), "No Year")
+nam[is.na(nam$year), "decade"] <- "No Year"
+table(nam$decade)
+
+print("Table of quarter century levels", quote=FALSE)
+levels(nam$quell) <- c(levels(nam$quell), "No Year")
+nam[is.na(nam$year), "quell"] <- "No Year"
+table(nam$quell)
+```
+The following is a setup of the world data. It is the same setup as the North American data, however we will use the North American data for now to create a map of distirbution in North America.
+```{r}
+#setup of world data
+print("The earliest record collected:", quote=FALSE)
+min(Rham$year, na.rm=TRUE)
+print("The youngest record collected:", quote=FALSE)
+max(Rham$year, na.rm=TRUE)
+Rham$decade <- cut(Rham$year, seq(1599, 2019, by = 10), dig.lab=4)
+
+Rham$quell <- cut(Rham$year, seq(1599, 2024, by = 25), dig.lab=4)
+#all year values are one less than desired for cutoff rates as cut function creates (] levels; therefore and exclusive beginning and inclusive ending number, and the values given define the endings of each level
+
+#adding "No Year" levels to both decade and quell columns
+print("Table of decade levels", quote=FALSE)
+levels(Rham$decade) <- c(levels(Rham$decade), "No Year")
+Rham[is.na(Rham$year), "decade"] <- "No Year"
+table(Rham$decade)
+
+print("Table of quarter century levels", quote=FALSE)
+levels(Rham$quell) <- c(levels(Rham$quell), "No Year")
+Rham[is.na(Rham$year), "quell"] <- "No Year"
+table(Rham$quell)
+```
+
+```{r}
+min(nam$coordinateUncertaintyInMeters, na.rm=TRUE)
+max(nam$coordinateUncertaintyInMeters, na.rm=TRUE)
+nam$uncertainty <- nam$coordinateUncertaintyInMeters
+nam[is.na(nam$uncertainty), "uncertainty"] <- 111000
+table(nam$uncertainty)
+```
+The following map is a map of North America. The Canada and USA maps that were bound together are more precise map polygons. On this map, the uncertainty of the point determines and is approximately proportional to its size. The colour corresponds to the decade the record was recorded in.
+```{r}
+library(raster) #setup of map
+library(scales)
+canmap <- getData("GADM", country="CAN",level=1)
+usamap <- getData("GADM", country="US", level=1)
+nammap <-bind(canmap,usamap)
+plot(nammap, xlim=c(-170,-60)) #plotting map and points
+points(x=nam$decimalLongitude, y=nam$decimalLatitude, col=alpha(colours()[nam$decade], 0.25), cex=nam$uncertainty/111000, pch=16)
+#size of points is the uncertainty in meters divided by the approximate meters in a latitude/longitude degree, in an attempt to make it proportional to the map
+```
+We can make the same map with quarter centuries, seen here:
+```{r}
+library(raster) #setup of map
+library(scales)
+canmap <- getData("GADM", country="CAN",level=1)
+usamap <- getData("GADM", country="US", level=1)
+nammap <-bind(canmap,usamap)
+plot(nammap, xlim=c(-170,-60)) #plotting map and points
+points(x=nam$decimalLongitude, y=nam$decimalLatitude, col=alpha(colours()[nam$quell], 0.25), cex=nam$coordinateUncertaintyInMeters/111000, pch=16)
+#size of points is the uncertainty in meters divided by the approximate meters in a latitude/longitude degree, in an attempt to make it proportional to the map
 ```
 
 Visualizing when the occurrences of R. cathartica are noted during the year (by month):
 ```{r}
 hist(Rham$month, breaks = 12, xlab="Month")
 ```
-Comparing the worldwide frequency of ocurrence per month to the Canadian ocurrence per month:
+Comparing the worldwide frequency of occurrence per month to the Canadian occurrence per month:
 ```{r}
 hist(cad$month, breaks = 12, xlab="Month")
 ```
