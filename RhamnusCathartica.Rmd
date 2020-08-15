@@ -45,7 +45,7 @@ install.packages(c("googlesheets4",
                    "rgeos", 
                    "scales"))
 ```
-
+Reading Google Sheets data and saving a local copy with odd columns removed:
 ```{r}
 library(googlesheets4) # loading package
 
@@ -59,7 +59,22 @@ Rham <- Rham[, ! colnames(Rham) %in% c("occurrenceID", "georeferencedDate",
 write.table(x = Rham, file = "Rham.tsv") # storing local copy of file from google sheets to prevent having to re-authenticate
 Rham <- read.table("Rham.tsv") # data preview
 ```
-
+Visualizing when the occurrences of R. cathartica are noted during the year (by month):
+```{r}
+hist(Rham$month, breaks = 12, xlab="Month")
+```
+Comparing the worldwide frequency of occurrence per month to the Canadian occurrence per month:
+```{r}
+hist(cad$month, breaks = 12, xlab="Month")
+```
+Histrogram of distribution of years most data was collected:
+```{r}
+hist(Rham$year, breaks = 420, xlab="Decade")
+```
+```{r}
+hist(log(Rham$coordinateUncertaintyInMeters), breaks=50)
+hist(Rham$coordinateUncertaintyInMeters, breaks=50)
+```
 Plotting out all the data we will be working with on a simple XY scatterplot:
 ```{r}
 plot(x = Rham$decimalLongitude, y = Rham$decimalLatitude, xlab = "Longitude", ylab = "Latitude", cex=0.5)
@@ -96,9 +111,10 @@ library(rgeos)
 library(maptools)
 data(wrld_simpl)
 
-plot(wrld_simpl, xlim=c(-127, -63), ylim=c(20, 50))
+plot(wrld_simpl, xlim=c(-120, -63), ylim=c(10, 50))
 box()
 points(x=usa$decimalLongitude, y=usa$decimalLatitude, col=alpha(colours()[usa$decade]), pch=16, cex=0.25)
+legend(x=-140, y=50, legend=levels(usa$decade), col=(colours()[usa$decade]), pch=20, cex = 0.5)
 ```
 The following map is the same world map zoomed in on Canada. The colour of the dot corresponds to the decade the record was recorded.
 ```{r}
@@ -114,8 +130,9 @@ plot(wrld_simpl, xlim=c(-145, -50), ylim=c(40, 80))
 box()
 #levels(cad$decade) <- c(seq(cad$decade))
 points(x=cad$decimalLongitude, y=cad$decimalLatitude, col=alpha(colours()[cad$decade], 0.75), cex=0.25, pch=16)
+legend(x=-170, y=80, legend=levels(cad$decade), col=colours()[cad$decade], pch=20, cex = 0.75)
 ```
-More work would have to be done to adjust the colours and make them more intuitive. I would like to be able to use hex codes for colours and create smooth gratients. such is possible with [this website](http://www.perbang.dk/rgbgradient/)
+More work would have to be done to adjust the colours and make them more intuitive. I would like to be able to use hex codes for colours and create smooth gradients. such is possible with [this website](http://www.perbang.dk/rgbgradient/)
 
 The following is the setup of the North American data to make a more informative map. 
 ```{r}
@@ -184,7 +201,21 @@ plot(nammap, xlim=c(-170,-60)) #plotting map and points
 points(x=nam$decimalLongitude, y=nam$decimalLatitude, col=alpha(colours()[nam$decade], 0.25), cex=nam$uncertainty/111000, pch=16)
 #size of points is the uncertainty in meters divided by the approximate meters in a latitude/longitude degree, in an attempt to make it proportional to the map
 ```
-We can make the same map with quarter centuries, seen here:
+Map of Ontario records, using a grayscale to indicate quarter century:
+```{r}
+ont <- subset(Rham, Rham$stateProvince == "Ontario")
+ont$decColours <- as.integer(ont$quell)-min(as.integer(ont$quell))
+ont$decColours <- as.integer(ont$decColours)/max(as.integer(ont$decColours))
+ont$decColours <- gray(ont$decColours)
+library(raster)
+library(scales)
+plot(canmap, xlim=c(-90,-73), ylim=c(40,57))
+box()
+points(x=ont$decimalLongitude, y=ont$decimalLatitude, pch=16, col=ont$decColours, cex=0.5)
+legend(x=-105, y=57, legend=levels(ont$quell), col=ont$decColours, pch=20, cex=0.75)
+```
+
+Map of North America with uncertainty and quarter centuries:
 ```{r}
 library(raster) #setup of map
 library(scales)
@@ -194,17 +225,21 @@ nammap <-bind(canmap,usamap)
 plot(nammap, xlim=c(-170,-60)) #plotting map and points
 points(x=nam$decimalLongitude, y=nam$decimalLatitude, col=alpha(colours()[nam$quell], 0.25), cex=nam$coordinateUncertaintyInMeters/111000, pch=16)
 #size of points is the uncertainty in meters divided by the approximate meters in a latitude/longitude degree, in an attempt to make it proportional to the map
+legend(x=-160, y=55, legend=levels(nam$quell), col=(colours()[nam$quell]), cex=0.6, pch=20)
 ```
-
-Visualizing when the occurrences of R. cathartica are noted during the year (by month):
+the same map with standard point size:
 ```{r}
-hist(Rham$month, breaks = 12, xlab="Month")
+library(raster) #setup of map
+library(scales)
+canmap <- getData("GADM", country="CAN",level=1)
+usamap <- getData("GADM", country="US", level=1)
+nammap <-bind(canmap,usamap)
+plot(nammap, xlim=c(-170,-60)) #plotting map and points
+points(x=nam$decimalLongitude, y=nam$decimalLatitude, col=alpha(colours()[nam$quell], 0.25), cex=0.5, pch=16)
+#size of points is the uncertainty in meters divided by the approximate meters in a latitude/longitude degree, in an attempt to make it proportional to the map
+legend(x=-160, y=55, legend=levels(nam$quell), col=(colours()[nam$quell]), cex=0.6, pch=20)
 ```
-Comparing the worldwide frequency of occurrence per month to the Canadian occurrence per month:
-```{r}
-hist(cad$month, breaks = 12, xlab="Month")
-```
-Attempting to use heatmap information on maps:
+Creating heat maps:
 ```{r}
 # remove records with missing coordinates
 library(raster)
@@ -236,9 +271,28 @@ a <- raster(bind(getData("GADM", country="CAN",level=1), getData("GADM", country
 res(a)=1
 occDensity <- rasterize(coordinates(RhamComplete), r, fun = 'count',
                        background = 0)
-plot(occDensity, xlim = c(-135, -60), ylim = c(30, 80))
+plot(occDensity, xlim = c(-140, -50), ylim = c(25, 75))
 #plot(occDensity)
 plot(bind(getData("GADM", country="CAN",level=1), getData("GADM", country="US",level=1)), add = TRUE)
+```
+Beginning to work with world climate data:
+```{r}
+library(raster)
+wc <- getData(name = "worldclim", var = "bio", res = 5)
+
+plot(wc$bio1)
+hist(wc$bio1)
+```
+
+```{r}
+RhamBio1 <- extract(wc$bio1, Rham[ , c("decimalLongitude", "decimalLatitude")])
+hist(RhamBio1)
+rb1D <- density (RhamBio1, na.rm=TRUE)
+wcb1D <- density(wc$bio1, na.rm=TRUE, plot=FALSE)
+ylims <-c(0, max(rb1D$y, wcb1D$y))
+plot(wcb1D, col="red", ylim=ylims, main="Bio1")
+lines(density(RhamBio1, na.rm=TRUE))
+
 ```
 
 ```{r setup, include=FALSE}
