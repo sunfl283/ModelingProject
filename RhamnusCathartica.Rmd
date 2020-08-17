@@ -239,6 +239,25 @@ points(x=nam$decimalLongitude, y=nam$decimalLatitude, col=alpha(colours()[nam$qu
 #size of points is the uncertainty in meters divided by the approximate meters in a latitude/longitude degree, in an attempt to make it proportional to the map
 legend(x=-160, y=55, legend=levels(nam$quell), col=(colours()[nam$quell]), cex=0.6, pch=20)
 ```
+An attempt to create a map of north america with a colour gradient to represent the year:
+```{r}
+#install.packages("wesanderson")
+library(wesanderson)
+library(raster)
+library(ggplot2)
+#wes_palette("Zissou1")
+#pal<-wes_palette("Zissou1", 100, type="continuous")
+
+colpal <- colorRampPalette(c("red", "orange", "yellow", "green", "light blue", "purple"))
+nam$col <- colpal(100)[as.numeric(cut(nam$year, breaks=100))]
+plot(nam$decimalLongitude, nam$decimalLatitude, pch=16, cex=0.5, col=nam$col, xlim=c(-140,-60))
+plot(nammap, xlim=c(-170,-60), add=TRUE)
+#legend(x=-140, y=55, legend=nam$year, col=scale_fill_gradientn(colours=colpal))
+legend_image <- as.raster(matrix(colpal(100), ncol=1))
+plot(c(0,2),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'Years')
+text(x=1.5, y = seq(0,1,l=5), labels = seq(1840,2020,l=5))
+rasterImage(legend_image, 0, 0, 1,1)
+```
 Creating heat maps:
 ```{r}
 # remove records with missing coordinates
