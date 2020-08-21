@@ -43,7 +43,8 @@ install.packages(c("googlesheets4",
                    "rJava", 
                    "maptools", 
                    "rgeos", 
-                   "scales"))
+                   "scales",
+                   "wesanderson"))
 ```
 Reading Google Sheets data and saving a local copy with odd columns removed:
 ```{r}
@@ -236,29 +237,41 @@ usamap <- getData("GADM", country="US", level=1)
 nammap <-bind(canmap,usamap)
 plot(nammap, xlim=c(-170,-60)) #plotting map and points
 points(x=nam$decimalLongitude, y=nam$decimalLatitude, col=alpha(colours()[nam$quell], 0.25), cex=0.5, pch=16)
-#size of points is the uncertainty in meters divided by the approximate meters in a latitude/longitude degree, in an attempt to make it proportional to the map
 legend(x=-160, y=55, legend=levels(nam$quell), col=(colours()[nam$quell]), cex=0.6, pch=20)
 ```
-An attempt to create a map of north america with a colour gradient to represent the year:
+##ggplot2 colour gradients
+
+I attempted to create a colour gradient map using the wesanderson colour palette package and the ggplot2 package. Unfortunately, the resulting map was the correct legend but the points are more properly colour coded. There also seems to be an issue with the scale/one weird point that should be excluded (far right)? Would also like to add a world /north america projection. The code needs work to display properly.
 ```{r}
 #install.packages("wesanderson")
 library(wesanderson)
 library(raster)
 library(ggplot2)
-#wes_palette("Zissou1")
-#pal<-wes_palette("Zissou1", 100, type="continuous")
+wes_palette("Zissou1")
+pal<-wes_palette("Zissou1", 1577, type="continuous")
+ggplot(nam, aes(x=decimalLongitude, y=decimalLatitude, fill=year))+
+  geom_point()+ #if add aes(color=pal) into brackets error says discrete values applied to continuous scale. if add aes(color=year), a separate bleck to blue gradient is created and used for the dots with a legend. OK, but not the colour scale I want the plot to use.
+  scale_fill_gradientn(colours=pal)
+```
 
+##Colour Gradients
+
+Use of continuous colour gradient allows for a more intuitive view of the dates associated with the records without having to make separate objects or levels. Here, a rainbow gradient was created, and the year data was associated so that the oldest records are red, and the youngest records are purple.
+```{r}
 colpal <- colorRampPalette(c("red", "orange", "yellow", "green", "light blue", "purple"))
 nam$col <- colpal(100)[as.numeric(cut(nam$year, breaks=100))]
 plot(nam$decimalLongitude, nam$decimalLatitude, pch=16, cex=0.5, col=nam$col, xlim=c(-140,-60))
 plot(nammap, xlim=c(-170,-60), add=TRUE)
-#legend(x=-140, y=55, legend=nam$year, col=scale_fill_gradientn(colours=colpal))
 legend_image <- as.raster(matrix(colpal(100), ncol=1))
 plot(c(0,2),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'Years')
-text(x=1.5, y = seq(0,1,l=5), labels = seq(1840,2020,l=5))
+text(x=1.5, y = seq(0,1,l=5), labels = seq(2020,1840,l=5))
 rasterImage(legend_image, 0, 0, 1,1)
 ```
-Creating heat maps:
+##Heat Maps
+
+Heat maps represent the concentration of the species distribution in an area with a colour scale. In these heat maps, red pixels indicate low concentration of R. cathartica records. Green pixels indicate high concentration of R. cathartica records in an area.
+
+World heat map:
 ```{r}
 # remove records with missing coordinates
 library(raster)
@@ -277,9 +290,9 @@ res(r) = 3
 occDensity <- rasterize(coordinates(RhamComplete), r, fun = 'count',
                        background = 0)
 
-plot(occDensity, xlim = c(-100, -60), ylim = c(35, 50))
-plot(occDensity)
-plot(wrld_simpl, add = TRUE)
+plot(occDensity, xlim = c(-100, -60), ylim = c(35, 50)) #north america heatmap with no map overlay
+plot(occDensity) 
+plot(wrld_simpl, add = TRUE) #world heatmaps with overlaid world map projection
 
 #llproj <- CRS('+proj=longlat +datum=WGS84')
 ```
@@ -294,6 +307,7 @@ plot(occDensity, xlim = c(-140, -50), ylim = c(25, 75))
 #plot(occDensity)
 plot(bind(getData("GADM", country="CAN",level=1), getData("GADM", country="US",level=1)), add = TRUE)
 ```
+##Visualizing Climate Data
 Beginning to work with world climate data:
 ```{r}
 library(raster)
@@ -302,7 +316,6 @@ wc <- getData(name = "worldclim", var = "bio", res = 5)
 plot(wc$bio1)
 hist(wc$bio1)
 ```
-
 ```{r}
 RhamBio1 <- extract(wc$bio1, Rham[ , c("decimalLongitude", "decimalLatitude")])
 hist(RhamBio1)
@@ -313,6 +326,63 @@ plot(wcb1D, col="red", ylim=ylims, main="Bio1")
 lines(density(RhamBio1, na.rm=TRUE))
 
 ```
+##Spatial Polygons
+Creating a convex hull of the limits of spread of R. cathartica:
+```{r}
+RhamC <- subset(Rham, !is.na(decimalLatitude))
+coordinates(RhamC) <- ~decimalLongitude+decimalLatitude
+crs(RhamC) <- 
+  "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0, 0, 0"
+```
+```{r}
+library(maptools)
+library(dismo)
+plot(wrld_simpl)
+chull <- convHull(RhamC)
+plot(chull, add=TRUE, col="red")
+points(RhamC)
+```
+Adding subsetted convex hulls to map the spread of R. cathartica over time:
+```{r}
+naRham <- subset(RhamC, coordinates(RhamC)[, 1]< -45 & coordinates(RhamC)[, 2] > 0)
+h1880 <- polygons(convHull(subset(naRham, year < 1880)))
+h1900 <- polygons(convHull(subset(naRham, year >= 1880 & year < 1900)))
+h1920 <- polygons(convHull(subset(naRham, year >= 1900 & year < 1920)))
+h1940 <- polygons(convHull(subset(naRham, year >= 1920 & year < 1940)))
+h1960 <- polygons(convHull(subset(naRham, year >= 1940 & year < 1960)))
+h1980 <- polygons(convHull(subset(naRham, year >= 1960 & year < 1980)))
+h2000 <- polygons(convHull(subset(naRham, year >= 1980 & year < 2000)))
+plot(wrld_simpl, xlim = c(-110, -50), ylim = c(25, 60))
+points(naRham)
+plot(h1880, add = TRUE, border = 'red', lwd = 2)
+plot(h1900, add = TRUE, border = 'orange', lwd = 2)
+plot(h1920, add = TRUE, border = 'green', lwd = 2)
+plot(h1940, add = TRUE, border = 'blue', lwd = 2)
+plot(h1960, add = TRUE, border = 'purple', lwd = 2)
+plot(h1980, add = TRUE, border = 'violet', lwd = 2)
+plot(h2000, add = TRUE, border = 'salmon', lwd = 2)
+```
+Attempting to create the same map as above but with levels instead of objects:
+```{r}
+library(raster) #setup of map
+library(scales)
+library(maptools)
+library(dismo)
+naRhamCut <- cut(naRham$year, seq(1839, 2019, by=20), dig.lab=4)
+
+plot(wrld_simpl, xlim = c(-110, -50), ylim = c(25, 60))
+points(naRham)
+plot(polygons(convHull(levels(naRhamCut))), add=TRUE, border=nam$col, lwd=2)
+```
+Adding buffers to display uncertainty of points:
+```{r}
+naC <- subset(naRham, !is.na(naRham$coordinateUncertaintyInMeters))
+buf <- buffer (naC, width = naC$coordinateUncertaintyInMeters, dissolve=FALSE)
+plot(wrld_simpl, xlim = c(-110, -50), ylim = c(25, 60))
+plot(buf, add = TRUE)
+```
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
